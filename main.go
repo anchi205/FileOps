@@ -1,6 +1,6 @@
 package main
 
-import "github.com/anchi205/file-store/cmd"
+import "github.com/anchi205/FileOps/cmd"
 
 func main() {
 	cmd.Execute()
