@@ -1,15 +1,16 @@
-package main
+package server
 
 import (
 	"github.com/anchi205/FileOps/server/controllers"
+	"github.com/anchi205/FileOps/server/routers"
 	"github.com/gin-gonic/gin"
 )
 
-func main() {
+func Server() {
 	router := gin.Default()
 
 	// Set up routes for file operations
-	controllers.SetupRoutes(router)
+	routers.SetupRoutes(router)
 
 	// Set up routes for hash-related operations
 	controllers.SetupHashRoutes(router)

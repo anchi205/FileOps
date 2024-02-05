@@ -14,7 +14,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func freqWordsHandler(c *gin.Context) {
+func FreqWordsHandler(c *gin.Context) {
 	sortOrder := c.Query("sortOrder")
 	limit := c.Query("limit")
 	searchTopWords(c, sortOrder, limit)

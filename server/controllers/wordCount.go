@@ -17,7 +17,7 @@ type WordCount struct {
 	Count int
 }
 
-func wordCountHandler(c *gin.Context) {
+func WordCountHandler(c *gin.Context) {
 	if c.Request.Method == "GET" {
 		searchAllWords(c)
 	} else {
