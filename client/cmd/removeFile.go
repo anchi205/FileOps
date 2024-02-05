@@ -43,8 +43,8 @@ func removeCLIHandler(args []string) {
 
 var rmCmd = &cobra.Command{
 	Use:   "rm",
-	Short: "removing cmd",
-	Long:  "removing cmd",
+	Short: "remove file command",
+	Long:  "remove file command",
 	Run: func(cmd *cobra.Command, args []string) {
 		removeCLIHandler(args)
 	},

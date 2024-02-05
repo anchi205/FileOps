@@ -35,8 +35,8 @@ func listCLIHandler() {
 
 var lsCmd = &cobra.Command{
 	Use:   "ls",
-	Short: "listing cmd",
-	Long:  "listing cmd",
+	Short: "list files command",
+	Long:  "list files command",
 	Run: func(cmd *cobra.Command, args []string) {
 		listCLIHandler()
 	},

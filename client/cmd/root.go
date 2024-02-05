@@ -7,7 +7,7 @@ import (
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "file-store",
+	Use:   "fileops",
 	Short: "FileOps is a CLI",
 	Long:  "FileOps is a CLI",
 }

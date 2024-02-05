@@ -145,8 +145,8 @@ func addFilesCLIHandler(args []string) {
 
 var addCmd = &cobra.Command{
 	Use:   "add",
-	Short: "updates files command",
-	Long:  "updates files command",
+	Short: "add files command",
+	Long:  "add files command",
 	Run: func(cmd *cobra.Command, args []string) {
 		addFilesCLIHandler(args)
 	},

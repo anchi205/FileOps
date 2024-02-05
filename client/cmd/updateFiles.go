@@ -14,8 +14,8 @@ func updateFileCLIHandler(args []string) {
 
 var updateCmd = &cobra.Command{
 	Use:   "update",
-	Short: "updating file cmd",
-	Long:  "updating file cmd",
+	Short: "update file command",
+	Long:  "update file command",
 	Run: func(cmd *cobra.Command, args []string) {
 		updateFileCLIHandler(args)
 	},

@@ -35,8 +35,8 @@ func freqWordsCLIHandler(baseURL string) {
 
 var freqWordsCmd = &cobra.Command{
 	Use:   "freq-words",
-	Short: "frequent words cmd",
-	Long:  "frequent words cmd",
+	Short: "frequent words command",
+	Long:  "frequent words command",
 	Run: func(cmd *cobra.Command, args []string) {
 		sortorder, _ := cmd.Flags().GetString("order")
 		limit, _ := cmd.Flags().GetString("limit")
