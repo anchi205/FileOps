@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 
 	"github.com/spf13/cobra"
 )
@@ -40,7 +39,7 @@ var freqWordsCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		sortorder, _ := cmd.Flags().GetString("order")
 		limit, _ := cmd.Flags().GetString("limit")
-		baseURL := os.Getenv("BASE_URL") + "/frequentWords"
+		baseURL := "http://localhost:8080/" + "frequentWords"
 		if sortorder != "" {
 			baseURL = baseURL + "?sortorder=" + sortorder
 		}

@@ -7,9 +7,7 @@ func init() {
 }
 
 func updateFileCLIHandler(args []string) {
-	jsonFileHashData := createFileHashJSON(args)
-	extractedFiles := filterFilesToUpload(jsonFileHashData)
-	uploadFilesToServer(extractedFiles)
+	handleAddFiles(args)
 }
 
 var updateCmd = &cobra.Command{

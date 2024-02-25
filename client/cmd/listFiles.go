@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 
 	"github.com/spf13/cobra"
 )
@@ -14,7 +13,7 @@ func init() {
 }
 
 func listCLIHandler() {
-	url := os.Getenv("BASE_URL") + "/list"
+	url := "http://localhost:8080/" + "list"
 
 	response, err := http.Get(url)
 	if err != nil {

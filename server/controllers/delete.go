@@ -2,46 +2,39 @@ package controllers
 
 import (
 	"fmt"
-	"net/http"
 	"os"
-	"path/filepath"
 
+	"github.com/anchi205/FileOps/server/store"
 	"github.com/gin-gonic/gin"
 )
 
-func DeleteFile(c *gin.Context) {
-	if c.Request.Method != http.MethodPost {
-		c.JSON(http.StatusMethodNotAllowed, gin.H{"error": "Method not allowed"})
-		return
-	}
+func DeleteFileHandler(c *gin.Context) {
 
-	filename := c.PostForm("filename")
-	if filename == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "File not specified"})
-		return
-	}
+	fileName := c.PostForm("filename")
+	fileHash := c.PostForm("filehash")
 
-	filePath := filepath.Join("./uploads", filename)
-	if err := handleSpecifiedFileDeletion(filePath); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	updateFileHash(filename)
-
-	c.JSON(http.StatusOK, gin.H{"message": fmt.Sprintf("File %s removed successfully!", filename)})
-}
-
-func handleSpecifiedFileDeletion(filePath string) error {
-	err := os.Remove(filePath)
+	// delete fileName from disk
+	fmt.Println("Deleting file:", fileName)
+	fileName = "uploads/" + fileName
+	err := os.Remove(fileName)
 	if err != nil {
-		return err
+		fmt.Println("Error deleting file:", err)
+		return
 	}
 
-	return nil
-}
+	// delete fileName from store
+	if len(store.Hashstore[fileHash]) == 1 {
+		delete(store.Hashstore, fileHash)
+		return
+	}
 
-func updateFileHash(filename string) {
-	hash, _ := calculateFileHash(filepath.Join("./uploads", filename))
-	FileHash[hash] = append(FileHash[hash], filename)
+	for i, name := range store.Hashstore[fileHash] {
+		if name == fileName {
+			store.Hashstore[fileHash] = append(store.Hashstore[fileHash][:i], store.Hashstore[fileHash][i+1:]...)
+		}
+	}
+
+	c.JSON(200, gin.H{
+		"message": fmt.Sprintf("Deleted file %s  successfully", fileName),
+	})
 }

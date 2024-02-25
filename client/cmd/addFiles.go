@@ -2,146 +2,176 @@ package cmd
 
 import (
 	"bytes"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"mime/multipart"
 	"net/http"
 	"os"
-	"strings"
 
+	"github.com/anchi205/FileOps/client/utils"
 	"github.com/spf13/cobra"
 )
 
-const serverURL = "http://localhost:8080/store/add"
-
-// ensures that the addCmd is available as a subcommand of the main command.
 func init() {
 	rootCmd.AddCommand(addCmd)
 }
 
-func calculateFileHash(filePath string) (string, error) {
-	fileData, err := os.ReadFile(filePath)
-	if err != nil {
-		return "", err
-	}
-	hasher := sha256.New()
-	hasher.Write(fileData)
-	hash := hex.EncodeToString(hasher.Sum(nil)) // hexadecimal repr
-
-	return hash, nil
+type ValidityResponse struct {
+	Validity []bool `json:"validity"`
 }
 
-func createFileHashJSON(args []string) []byte {
-	var FileHash = make(map[string]string)
-	for _, file := range args {
-		hash, err := calculateFileHash(file)
-		if err != nil {
-			fmt.Println("Error calculating hash for file:", err)
-		}
-		FileHash[file] = hash
-	}
-	jsonFileHashData, err := json.Marshal(FileHash)
+func getValidityFromServer(file_hash string, file_name string) []bool {
+	url := "http://localhost:8080/validity?file_hash=" + file_hash + "&file_name=" + file_name
+	resp, err := http.Get(url)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("Error while pinging server: ", err)
 	}
-	return jsonFileHashData
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println("Error reading response body:", err)
+	}
+	var response ValidityResponse
+	// Unmarshal the JSON string into the ValidityResponse struct
+	if err := json.Unmarshal([]byte(string(body)), &response); err != nil {
+		fmt.Println("Error in parsing the response", err)
+	}
+	return response.Validity
 }
 
-func filterFilesToUpload(jsonFileHashData []byte) map[string]interface{} {
-	baseURL := os.Getenv("BASE_URL")
-	url := baseURL + "/getHash"
-
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonFileHashData))
+func uploadFile(url, filePath, fileName, fileHash string) error {
+	// Open the file
+	file, err := os.Open(filePath)
 	if err != nil {
-		log.Fatal(err)
+		return err
+	}
+	defer file.Close()
+
+	// Create a new HTTP request
+	req, err := http.NewRequest("POST", url, nil)
+	if err != nil {
+		return err
 	}
 
-	req.Header.Set("Content-Type", "application/json")
+	// Create a new multipart writer
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+
+	writer.WriteField("filename", fileName)
+	writer.WriteField("filehash", fileHash)
+
+	// Create a form file field and add it to the multipart writer
+	part, err := writer.CreateFormFile("file", filePath)
+	if err != nil {
+		return err
+	}
+
+	// Copy the file data to the part
+	_, err = io.Copy(part, file)
+	if err != nil {
+		return err
+	}
+
+	// Close the multipart writer
+	writer.Close()
+
+	// Set the content type header
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	// Set the request body
+	req.Body = io.NopCloser(body)
+
+	// Perform the HTTP request
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	defer resp.Body.Close()
 
-	responseBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.Fatal(err)
+	// Check the response status code
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("unexpected status: %s", resp.Status)
 	}
 
-	filteredFiles := make(map[string]interface{})
-	json.Unmarshal([]byte(responseBody), &filteredFiles)
-
-	return filteredFiles
+	return nil
 }
 
-func uploadFilesToServer(files map[string]interface{}) {
-	baseURL := os.Getenv("BASE_URL")
-	url := baseURL + "/upload"
+func create_duplicate_file(url, fileName, fileHash string) error {
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
 
-	for key, value := range files {
-		// key is file name and value is isPresent boolean
-		file, err := os.Open(key)
+	// Create a new HTTP request
+	req, err := http.NewRequest("POST", url, nil)
+	if err != nil {
+		return err
+	}
+
+	writer.WriteField("filename", fileName)
+	writer.WriteField("filehash", fileHash)
+
+	// Close the multipart writer
+	writer.Close()
+
+	// Set the content type header
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	// Set the request body
+	req.Body = io.NopCloser(body)
+
+	// Perform the HTTP request
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	// Check the response status code
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("unexpected status: %s", resp.Status)
+	}
+
+	return nil
+}
+
+func handleAddFiles(args []string) {
+	// args has all the file paths
+	for _, file := range args {
+		file_content := utils.ReadFile(file)
+		file_hash, err := utils.GetSHA1(file_content)
 		if err != nil {
-			fmt.Println(err)
-			return
+			fmt.Println("Error while getting SHA1 hash of file: ", file)
 		}
-		defer file.Close()
-		body := &bytes.Buffer{}
-		writer := multipart.NewWriter(body)
-		parts := strings.Split(key, "/")
-		parsedFileName := parts[len(parts)-1]
-		hash, _ := calculateFileHash(key)
-
-		if value == true {
-			_ = writer.WriteField("isFilePresent", "true")
+		file_name := utils.TrimFileName(file)
+		validity := getValidityFromServer(file_hash, file_name)
+		if validity[0] {
+			if !validity[1] {
+				create_duplicate_file("http://localhost:8080/createDuplicate", file_name, file_hash)
+			} else {
+				fmt.Println("File already exists on server, no need to upload again")
+			}
 		} else {
-			_ = writer.WriteField("isFilePresent", "false")
+			uploadFile("http://localhost:8080/upload", file, file_name, file_hash)
 		}
-		_ = writer.WriteField("fileName", parsedFileName)
-		_ = writer.WriteField("fileHash", hash)
-
-		formFile, err := writer.CreateFormFile("files", parsedFileName)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		io.Copy(formFile, file)
-		writer.Close()
-
-		req, err := http.NewRequest("POST", url, body)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		req.Header.Set("Content-Type", writer.FormDataContentType())
-
-		client := &http.Client{}
-		resp, err := client.Do(req)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		defer resp.Body.Close()
-
-		bodyBytes, err := io.ReadAll(resp.Body)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		fmt.Println(string(bodyBytes))
 	}
 }
 
 func addFilesCLIHandler(args []string) {
-	jsonFileHashData := createFileHashJSON(args)
-	filteredFiles := filterFilesToUpload(jsonFileHashData)
-	uploadFilesToServer(filteredFiles)
+	handleAddFiles(args)
 }
+
+// ----on cli----
+// get multiple files from cli and process them by making file_hash, file_content and file_name
+// check for hash on the server if it exists then check for file name (make a check_presence() endpoint on server for this)
+// if both exists do nothing
+// if only hash exists then just create a new file on server
+// if none exists then upload the file and create a new file on server
+
+// ----on server----
+// mape of hash and []file_name
+// example : 897ew7d647ds6876ds => [file1, file2, file3]
 
 var addCmd = &cobra.Command{
 	Use:   "add",

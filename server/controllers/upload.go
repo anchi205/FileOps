@@ -2,87 +2,43 @@ package controllers
 
 import (
 	"fmt"
-	"io"
-	"net/http"
-	"os"
-	"path/filepath"
 
+	"github.com/anchi205/FileOps/client/utils"
+	"github.com/anchi205/FileOps/server/store"
 	"github.com/gin-gonic/gin"
 )
 
-func UploadFile(c *gin.Context) {
-	isFilePresent := c.PostForm("isFilePresent") == "true"
-	fileName := c.PostForm("fileName")
-	fileHash := c.PostForm("fileHash")
+func UploadFileHandler(c *gin.Context) {
 
-	if isFilePresent {
-		if _, err := os.Stat(filepath.Join("./uploads", fileName)); err == nil {
-			c.String(http.StatusOK, "File already present on the server!")
-			return
-		} else {
-			// file does not exist
-			c.String(http.StatusOK, "File content already present on the server!, creating new file")
-			srcFile := FileHash[fileHash][0]
-			source, err := os.Open(filepath.Join("./uploads", srcFile))
-			if err != nil {
-				c.String(http.StatusInternalServerError, err.Error())
-				return
-			}
-			defer source.Close()
+	file, err := c.FormFile("file")
+	fileName := c.PostForm("filename")
+	fileHash := c.PostForm("filehash")
 
-			dst, err := os.Create(filepath.Join("./uploads", fileName))
-			if err != nil {
-				c.String(http.StatusInternalServerError, err.Error())
-				return
-			}
-			defer dst.Close()
-
-			_, err = io.Copy(dst, source)
-			if err != nil {
-				c.String(http.StatusInternalServerError, err.Error())
-				return
-			}
-			FileHash[fileHash] = append(FileHash[fileHash], fileName)
-			return
-		}
-	}
-
-	form, err := c.MultipartForm()
 	if err != nil {
-		c.String(http.StatusInternalServerError, err.Error())
+		c.JSON(400, gin.H{"error": "File not found in request"})
 		return
 	}
 
-	files := form.File["files"]
-	for _, fileHeader := range files {
-		file, err := fileHeader.Open()
-		if err != nil {
-			c.String(http.StatusInternalServerError, err.Error())
-			return
-		}
-		defer file.Close()
-
-		dst, err := os.Create(filepath.Join("./uploads", fileHeader.Filename))
-		if err != nil {
-			c.String(http.StatusInternalServerError, err.Error())
-			return
-		}
-		defer dst.Close()
-
-		_, err = io.Copy(dst, file)
-		if err != nil {
-			c.String(http.StatusInternalServerError, err.Error())
-			return
-		}
-
-		hash, err := calculateFileHash(filepath.Join("./uploads", fileHeader.Filename))
-		if err != nil {
-			c.String(http.StatusInternalServerError, err.Error())
-			return
-		}
-		FileHash[hash] = append(FileHash[hash], fileHeader.Filename)
+	// Save the file locally
+	if err := c.SaveUploadedFile(file, "uploads/"+fileName); err != nil {
+		c.JSON(500, gin.H{"error": "Failed to save file"})
+		return
 	}
+	fmt.Printf("Uploaded file: %s, Filehash: %s\n", fileName, fileHash)
+	store.Hashstore[fileHash] = []string{fileName}
+	c.JSON(200, gin.H{
+		"message": fmt.Sprintf("File %s uploaded successfully", fileName),
+	})
+}
 
-	message := fmt.Sprintf("%s uploaded successfully!", fileName)
-	c.String(http.StatusOK, message)
+func CreateDuplicateHandler(c *gin.Context) {
+	fileName := c.PostForm("filename")
+	fileHash := c.PostForm("filehash")
+
+	store.Hashstore[fileHash] = append(store.Hashstore[fileHash], fileName)
+	utils.CopyFile("uploads/"+store.Hashstore[fileHash][0], "uploads/"+fileName)
+
+	c.JSON(200, gin.H{
+		"message": fmt.Sprintf("Duplicate file %s created successfully", fileName),
+	})
 }

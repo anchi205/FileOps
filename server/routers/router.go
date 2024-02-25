@@ -6,9 +6,11 @@ import (
 )
 
 func SetupRoutes(router *gin.Engine) {
-	router.POST("/upload", controllers.UploadFile)
-	router.GET("/files", controllers.ListFiles)
+	router.POST("/upload", controllers.UploadFileHandler)
+	router.POST("/createDuplicate", controllers.CreateDuplicateHandler)
+	router.GET("/list", controllers.ListFiles)
+	router.GET("/validity", controllers.GetValidityHandler)
 	router.GET("/frequentWords", controllers.FreqWordsHandler)
 	router.GET("/wordcount", controllers.WordCountHandler)
-	router.DELETE("/files/:filename", controllers.DeleteFile)
+	router.POST("/delete", controllers.DeleteFileHandler)
 }

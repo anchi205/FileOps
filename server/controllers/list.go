@@ -25,6 +25,6 @@ func ListFiles(c *gin.Context) {
 		fileNames = append(fileNames, file.Name())
 	}
 
-	response := strings.Join(fileNames, "\n")
+	response := "Files present on the server are: \n[" + strings.Join(fileNames, " ") + "]"
 	c.String(http.StatusOK, response)
 }

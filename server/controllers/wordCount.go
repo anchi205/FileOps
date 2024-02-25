@@ -23,6 +23,7 @@ func WordCountHandler(c *gin.Context) {
 	} else {
 		c.String(http.StatusMethodNotAllowed, "Method not allowed")
 	}
+
 }
 
 func searchAllWords(c *gin.Context) {
@@ -79,6 +80,5 @@ func searchAllWords(c *gin.Context) {
 	for _, wordCount := range topWords {
 		totalWordCount += wordCount.Count
 	}
-	message := fmt.Sprintf("Total word count: %d\n", totalWordCount)
-	c.String(http.StatusOK, message)
+	c.JSON(http.StatusOK, gin.H{"word_count": totalWordCount})
 }
