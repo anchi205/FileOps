@@ -7,12 +7,9 @@ that stores plain-text files in any programming language(Golang has been used he
 
 - The CLI acts as a client which can add, remove, edit and list files on the server.
 
+- Add command should fail if the file already exists in the server.
 
-# Operations:
-
-Add command should fail if the file already exists in the server.
-
-Client won't send a file if its content is already in the server(in some other file on the server) -> add a new file without having to send its contents
+- Client won't send a file if its content is already in the server(in some other file on the server) -> add a new file without having to send its contents
 
 
 
@@ -20,7 +17,17 @@ A CLI interface to an HTTP file server with multiple available commands. This CL
 
 ## Usage
 
-#### To begin with, run
+
+- Clone the repo
+- Run `go build`
+- Use `./FileOps server`to run the server
+
+### If you are using docker:
+
+- `docker build -t fileops .`
+- `docker run -e PORT=8080 -p 8080:8080 fileops`
+
+### While developing, we can run
 
 ```
 go run main.go
